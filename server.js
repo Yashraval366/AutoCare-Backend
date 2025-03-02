@@ -12,6 +12,7 @@ app.use(express.json())
 app.use(cors())
 app.use(errorHandler)
 app.use("/api/users", require("./Routes/usersRoute"))
+app.use("/api/garage", require("./Routes/garageUserRoute"))
 
 app.get("/", (req, res) => {
     res.send("app is working");
