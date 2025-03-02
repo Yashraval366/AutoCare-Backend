@@ -1,33 +1,80 @@
 const asyncHandler = require('express-async-handler')
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken')
-const moment = require('moment');
 const mysqlConnection = require('../config/dbconnection');
 
 const RegisterUser = asyncHandler(async (req, res) => {
-    const { role, username, email, password, phone, dob, gender, city } = req.body;
+    const { role, username, email, password, phone, gender, city, garage_name, garage_location, garage_contact, garage_email } = req.body;
+    const garageImage = req.file ? "/uploads/" + req.file.filename : null;
 
-    if( !role || !username || !email || !password || !phone || !dob || !gender || !city ) {
-            res.status(400)
-            throw new Error("All fields are mandatory");
+    // Check if all required fields are present
+    if (!role || !username || !email || !password || !phone || !gender || !city) {
+        return res.status(400).json({ message: "All fields are mandatory" });
+    }
+
+    // Hash the password before storing it
+    const hashpassword = await bcrypt.hash(String(password), 10);
+    let connection;
+
+    try {
+        // Start a database transaction
+        connection = await mysqlConnection.getConnection();
+        await connection.beginTransaction();
+
+        // Check if the username, email, or phone already exists
+        const [existingUser] = await connection.execute(
+            `SELECT id FROM users WHERE email = ? OR phone = ? OR username = ?`, 
+            [email, phone, username]
+        );
+
+        if (existingUser.length > 0) {
+            connection.release();
+            return res.status(400).json({ message: "Username, email, or phone number already exists" });
         }
-    
-    const hashpassword = await bcrypt.hash(password, 10);
 
-    const formattedDOB = moment(dob, ["DD-MM-YYYY", "MM-DD-YYYY"]).format("YYYY-MM-DD");
+        // Insert the user into the database
+        const queryforuser = `INSERT INTO users (role, username, email, password, phone, gender, city) VALUES (?, ?, ?, ?, ?, ?, ?)`;
+        const [userResult] = await connection.execute(
+            queryforuser, [role, username, email, hashpassword, phone, gender, city]
+        );
 
-    const sql = `insert into usertable (role, username, email, password, phone, date_of_birth, gender, city) values (?, ?, ?, ?, ?, ?, ?, ?)`
-    
-    mysqlConnection.query(sql, [role, username, email, hashpassword, phone, formattedDOB, gender, city], (err, result) => {
-        if(err) {
-            if(err.code === 'ER_DUP_ENTRY') {
-                return res.status(400).json({ message:'Username, email, or phone number already exists'})
+        const userId = userResult.insertId; // Get the inserted user's ID
+
+        // If the user is a garage owner, insert garage information as well
+        if (role === "garageowner") {
+            if (!garage_name || !garage_location || !garage_contact || !garage_email || !garageImage) {
+                throw new Error("Garage details are required for a garage owner");
             }
-             return res.status(500).json({message : 'Database Error', error : err});
+
+            // Insert garage information into the 'garages' table
+            await connection.execute(
+                `INSERT INTO garages (owner_id, garage_name, garage_location, garage_contact, garage_email, garage_image) 
+                 VALUES (?, ?, ?, ?, ?, ?)`,
+                [userId, garage_name, garage_location, garage_contact, garage_email, garageImage] // Correctly mapped field names
+            );
         }
-        res.status(201).json({ message: 'User registered successfully' });
-    })
-})
+
+        // Commit the transaction
+        await connection.commit();
+
+        // Respond to the client that registration was successful
+        res.status(201).json({ message: "User registered successfully" });
+
+    } catch (err) {
+        // Rollback if there was an error
+        console.log(req.body); // Log the request body for debugging
+        console.log(req.file); // Log the uploaded file for debugging
+        if (connection) await connection.rollback(); 
+        console.error("Database Error:", err);
+        
+        // Return error response
+        res.status(500).json({ message: "Database Error", error: err.message });
+    } finally {
+        if (connection) connection.release(); // Release the database connection
+    }
+});
+
+
 
 const loginUser = asyncHandler(async (req, res) => {
     const { email, password } = req.body
