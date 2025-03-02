@@ -3,6 +3,7 @@ const app = express();
 const dotenv = require('dotenv');
 const cors = require('cors')
 const errorHandler = require('./middleware/errorHandler');
+const verifyToken = require('./middleware/authMiddleware');
 dotenv.config();
 
 const port = process.env.PORT || 5000;
