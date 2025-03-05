@@ -58,7 +58,7 @@ const authUsers = (req, res, next) => {
         req.user = decoded; 
 
         if (req.user.role !== "user") {
-            return res.status(403).json({ message: "Access denied: Only garage owners allowed" });
+            return res.status(403).json({ message: "Access denied: Only user owners allowed" });
         }
 
         next();
