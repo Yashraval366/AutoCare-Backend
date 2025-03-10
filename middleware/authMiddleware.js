@@ -55,11 +55,7 @@ const authUsers = (req, res, next) => {
 
     try {
         const decoded = jwt.verify(token, process.env.SECRET_KEY);
-        req.user = decoded; 
-
-        if (req.user.role !== "user") {
-            return res.status(403).json({ message: "Access denied: Only user owners allowed" });
-        }
+        req.user = decoded;
 
         next();
     } catch(err) {

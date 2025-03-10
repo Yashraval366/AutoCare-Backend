@@ -18,11 +18,10 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
+router.route("/sayhello").get(sayhello)
 router.route("/register").post(upload.single("garage_image"), RegisterUser)
-
 router.route("/login").post(loginUser)
 router.route("/check-auth", authMiddleware).get(checkAuth)
-router.route("/sayhello").get(sayhello)
 router.route("/getusers").get(authUsers, getUsersData)
 
 module.exports = router;

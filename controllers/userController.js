@@ -31,7 +31,6 @@ const RegisterUser = asyncHandler(async (req, res) => {
             connection.release();
             return res.status(400).json({ message: "Username, email, or phone number already exists" });
         }
-
     
         const queryforuser = `INSERT INTO users (role, username, email, password, phone, gender, city) VALUES (?, ?, ?, ?, ?, ?, ?)`;
         const [userResult] = await connection.execute(
