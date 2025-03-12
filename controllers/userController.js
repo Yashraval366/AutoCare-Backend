@@ -100,13 +100,14 @@ const loginUser = asyncHandler(async (req, res) => {
 
          const token = jwt.sign({ 
             id: user.id,
+            username: user.username,
             role: user.role
          }, 
          process.env.SECRET_KEY, {
             expiresIn: '15m',
         });
 
-        res.json({ message: "Login successful", token, role: user.role });
+        res.json({ message: "Login successful", token, role: user.role, username: user.username });
 
     } catch (err){
         console.log("Error In function : ", err)
