@@ -27,4 +27,7 @@ const setBookslotData = asyncHandler(async (req, res) => {
     }
 })
 
+const getbookslot =
+
+
 module.exports = setBookslotData;
