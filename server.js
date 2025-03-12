@@ -17,6 +17,7 @@ app.use('/uploads', express.static(path.join(__dirname, '/uploads')));
 app.use("/api/users", require("./Routes/usersRoute"))
 app.use("/api/garageown", require('./Routes/garageownerRoutes'))
 app.use("/api/garages", require('./Routes/garagesRoute'))
+app.use("/api/bookslot", require('./Routes/bookslotRoute'))
 
 app.get("/", (req, res) => {
     res.send("app is working");

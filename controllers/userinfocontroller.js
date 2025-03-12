@@ -23,5 +23,19 @@ const getUsersData = asyncHandler(async (req, res) => {
     }
 }) 
 
+const getmyusers  = asyncHandler(async (req, res)=> {
+    let connection = await mysqlConnection.getConnection()
+    try{
+        const [myusers] = await connection.execute(
+            `select * from students`
+        )
+        res.json({Myuser : myusers[0]})
+        console.log(myusers)
+    } catch(err) {
+        console.log("error getting data from db", err)
+    } finally {
+        connection.release()
+    }
+})
 
-module.exports = getUsersData;
+module.exports = {getUsersData, getmyusers};
