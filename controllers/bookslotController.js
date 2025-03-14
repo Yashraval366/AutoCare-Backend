@@ -151,4 +151,4 @@ const autoCancelExpiredBookings = async () => {
 };
 
 
-module.exports = {setBookslotData, getBookslotsData, updateBookingStatus, cancelBooking}
+module.exports = {setBookslotData, getBookslotsData, updateBookingStatus, cancelBooking, autoCancelExpiredBookings}
