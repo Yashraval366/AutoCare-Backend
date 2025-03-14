@@ -3,7 +3,9 @@ const app = express();
 const dotenv = require('dotenv');
 const path = require('path')
 const cors = require('cors')
+const schedule = require('node-schedule');
 const errorHandler = require('./middleware/errorHandler');
+const { autoCancelExpiredBookings } = require('./controllers/bookslotController')
 dotenv.config();
 
 const port = process.env.PORT || 5000;
@@ -18,6 +20,8 @@ app.use("/api/users", require("./Routes/usersRoute"))
 app.use("/api/garageown", require('./Routes/garageownerRoutes'))
 app.use("/api/garages", require('./Routes/garagesRoute'))
 app.use("/api/bookslot", require('./Routes/bookslotRoute'))
+
+schedule.scheduleJob('59 23 * * *', autoCancelExpiredBookings);
 
 app.get("/", (req, res) => {
     res.send("app is working");
