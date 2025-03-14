@@ -1,15 +1,14 @@
 const asyncHandler = require('express-async-handler');
 const mysqlConnection = require('../config/dbconnection');
-const schedule = require('node-schedule');
 
 const setBookslotData = asyncHandler(async (req, res) => {
     let connection = await mysqlConnection.getConnection()
     try{
-        const {garage_id, garage_name, name, number, date, time, service} = req.body;
-        console.log(garage_id, garage_name, name, number, date, time, service)
+        const {garage_id, garage_name, name, email, date, time, service} = req.body;
+        console.log(garage_id, garage_name, name, email, date, time, service)
         
 
-        if(!garage_id || !garage_name || !name || !number || !date || !time || !service){
+        if(!garage_id || !garage_name || !name || !email || !date || !time || !service){
             return res.json({message: "all fields are mandatory"})
         }
 
@@ -25,8 +24,8 @@ const setBookslotData = asyncHandler(async (req, res) => {
         }
 
         const bookingslot = await connection.execute(
-            `insert into bookslots(garage_id, garage_name, name, number, date, time, service)
-            values(?, ?, ?, ?, ?, ?,?)`, [garage_id, garage_name, name, number, formattedDate, time, service]
+            `insert into bookslots(garage_id, garage_name, name, email, date, time, service)
+            values(?, ?, ?, ?, ?, ?,?)`, [garage_id, garage_name, name, email, formattedDate, time, service]
         )
 
         res.json({message: 'booked slot successfully', bookingId: bookingslot.insertId})
@@ -43,7 +42,7 @@ const getBookslotsData = asyncHandler(async (req, res) => {
     
     try {   
         const [garageData] = await connection.execute(
-            `SELECT garage_id FROM bookslots WHERE bookslot_id = ?`, [req.user.id]
+            `SELECT garage_id FROM bookslots WHERE garage_id = ?`, [req.user.id]
         )
 
         if (garageData.length === 0) {
@@ -75,52 +74,43 @@ const updateBookingStatus = asyncHandler(async (req, res) => {
     let connection = await mysqlConnection.getConnection();
 
     try {
-        const { booking_id, status } = req.body;
+        const { bookslot_id, status } = req.body;
 
-        if (!booking_id || !status) {
+        if (!bookslot_id || !status) {
             return res.status(400).json({ message: "Booking ID and status are required" });
         }
 
-        const [result] = await connection.execute(
-            `UPDATE bookslots SET status = ? WHERE id = ?`,
-            [status, booking_id]
+
+        const validStatuses = ["Pending", "Completed", "Cancelled"];
+        if (!validStatuses.includes(status)) {
+            return res.status(400).json({ message: "Invalid status value" });
+        }
+
+        const [existingBooking] = await connection.execute(
+            `SELECT * FROM bookslots WHERE bookslot_id = ?`,
+            [bookslot_id]
         );
 
-        if (result.affectedRows === 0) {
+        if (existingBooking.length === 0) {
             return res.status(404).json({ message: "Booking not found" });
         }
 
-        res.json({ message: "Booking status updated successfully" });
 
-    } catch (err) {
-        console.error("Database Error:", err);
-        res.status(500).json({ message: "Database Error", error: err.message });
-    } finally {
-        connection.release();
-    }
-})
-
-const cancelBooking = asyncHandler(async (req, res) => {
-    let connection = await mysqlConnection.getConnection();
-    
-    try {
-        const { booking_id } = req.body; 
-
-        if (!booking_id) {
-            return res.status(400).json({ message: "Booking ID is required" });
-        }
-
-        // Update the status to "Cancelled"
-        const [result] = await connection.execute(
-            `UPDATE bookslots SET status = 'Cancelled' WHERE id = ?`,
-            [booking_id]
+        await connection.execute(
+            `UPDATE bookslots SET status = ? WHERE bookslot_id = ?`,
+            [status, bookslot_id]
         );
 
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ message: "Booking not found" });
-        }
 
-        res.json({ message: "Booking cancelled successfully" });
+        const [updatedBooking] = await connection.execute(
+            `SELECT * FROM bookslots WHERE bookslot_id = ?`,
+            [bookslot_id]
+        );
+
+        res.json({
+            message: "Booking status updated successfully",
+            booking: updatedBooking[0],
+        });
 
     } catch (err) {
         console.error("Database Error:", err);
@@ -129,6 +119,7 @@ const cancelBooking = asyncHandler(async (req, res) => {
         connection.release();
     }
 });
+
 
 const autoCancelExpiredBookings = async () => {
     let connection = await mysqlConnection.getConnection();
@@ -151,4 +142,4 @@ const autoCancelExpiredBookings = async () => {
 };
 
 
-module.exports = {setBookslotData, getBookslotsData, updateBookingStatus, cancelBooking, autoCancelExpiredBookings}
+module.exports = {setBookslotData, getBookslotsData, updateBookingStatus, autoCancelExpiredBookings}

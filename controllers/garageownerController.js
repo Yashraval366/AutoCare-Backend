@@ -26,4 +26,5 @@ const getGarageData = asyncHandler(async (req, res) => {
 }) 
 
 
+
 module.exports = getGarageData;
