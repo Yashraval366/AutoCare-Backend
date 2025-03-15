@@ -10,6 +10,9 @@ const setBookslotData = asyncHandler(async (req, res) => {
         const user_id = req.user.id;
         const { garage_id, garage_name, name, email, date, time, service } = req.body;
 
+        console.log("Received Request Body:", req.body);
+        console.log("User Object:", req.user);
+
         if (!garage_id || !garage_name || !name || !email || !date || !time || !service) {
             return res.status(400).json({ message: "All fields are mandatory" });
         }
@@ -20,7 +23,7 @@ const setBookslotData = asyncHandler(async (req, res) => {
             `SELECT COUNT(*) AS count FROM bookslots WHERE garage_id = ? AND date = ?`,
             [garage_id, formattedDate]
         );
-        const queue_position = (queueCount[0].count || 0) + 1; 
+        const queue_position = (queueCount[0].count || 0) + 1;
 
         console.log("Queue Position:", queue_position);
 
@@ -36,6 +39,7 @@ const setBookslotData = asyncHandler(async (req, res) => {
         const [bookingslot] = await connection.execute(
             `INSERT INTO bookslots (garage_id, garage_name, user_id, name, email, date, time, service, queue_position) 
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+
             [garage_id, garage_name, user_id, name, email, formattedDate, time, service, queue_position]
         );
 
