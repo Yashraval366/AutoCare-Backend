@@ -2,40 +2,52 @@ const asyncHandler = require('express-async-handler');
 const mysqlConnection = require('../config/dbconnection');
 
 const setBookslotData = asyncHandler(async (req, res) => {
-    let connection = await mysqlConnection.getConnection()
-    try{
-        const {garage_id, garage_name, name, email, date, time, service} = req.body;
-        console.log(garage_id, garage_name, name, email, date, time, service)
-        
+    let connection;
 
-        if(!garage_id || !garage_name || !name || !email || !date || !time || !service){
-            return res.json({message: "all fields are mandatory"})
+    try {
+        connection = await mysqlConnection.getConnection();
+
+        const user_id = req.user.id;
+        const { garage_id, garage_name, name, email, date, time, service } = req.body;
+
+        if (!garage_id || !garage_name || !name || !email || !date || !time || !service) {
+            return res.status(400).json({ message: "All fields are mandatory" });
         }
 
         const formattedDate = new Date(date).toISOString().split("T")[0];
+
+        const [queueCount] = await connection.execute(
+            `SELECT COUNT(*) AS count FROM bookslots WHERE garage_id = ? AND date = ?`,
+            [garage_id, formattedDate]
+        );
+        const queue_position = (queueCount[0].count || 0) + 1; 
+
+        console.log("Queue Position:", queue_position);
 
         const [existingBooking] = await connection.execute(
             `SELECT * FROM bookslots WHERE garage_id = ? AND date = ? AND time = ?`,
             [garage_id, formattedDate, time]
         );
 
-        if(existingBooking > 0){
-            return res.status(400).json({ message: "already booked!" });
+        if (existingBooking.length > 0) {
+            return res.status(400).json({ message: "Already booked!" });
         }
 
-        const bookingslot = await connection.execute(
-            `insert into bookslots(garage_id, garage_name, name, email, date, time, service)
-            values(?, ?, ?, ?, ?, ?,?)`, [garage_id, garage_name, name, email, formattedDate, time, service]
-        )
+        const [bookingslot] = await connection.execute(
+            `INSERT INTO bookslots (garage_id, garage_name, user_id, name, email, date, time, service, queue_position) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [garage_id, garage_name, user_id, name, email, formattedDate, time, service, queue_position]
+        );
 
-        res.json({message: 'booked slot successfully', bookingId: bookingslot.insertId})
+        res.json({ message: "Booked slot successfully", bookingId: bookingslot.insertId });
 
-    } catch(err) {
-        res.json({Error : err})
+    } catch (err) {
+        console.error("Error in setBookslotData:", err);
+        res.status(500).json({ error: err.message || "Internal Server Error" });
     } finally {
-        connection.release();
+        if (connection) connection.release();
     }
-})
+});
 
 const getBookslotsData = asyncHandler(async (req, res) => {
     const connection = await mysqlConnection.getConnection();
@@ -58,7 +70,7 @@ const getBookslotsData = asyncHandler(async (req, res) => {
         if (bookslotsData.length === 0) {
             return res.status(404).json({ message: "No booking slots found for this garage" });
         }
-
+        
         res.json({ garage_id, bookings: bookslotsData });
         
     } catch (err) {

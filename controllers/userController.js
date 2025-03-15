@@ -104,7 +104,7 @@ const loginUser = asyncHandler(async (req, res) => {
             role: user.role
          }, 
          process.env.SECRET_KEY, {
-            expiresIn: '15m',
+            expiresIn: '30m',
         });
 
         res.json({ message: "Login successful", token, role: user.role, username: user.username });
