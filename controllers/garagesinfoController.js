@@ -5,25 +5,28 @@ const getGaragesInfo = asyncHandler(async (req, res) => {
     const connection = await mysqlConnection.getConnection();
 
     try {
+        
         const [garagesInfo] = await connection.execute(
-            `SELECT * FROM garages`
+            `SELECT id AS garage_id, garage_name, garage_location, garage_contact, 
+                    garage_email, garage_image, created_at 
+             FROM garages`
         );
 
         if (garagesInfo.length === 0) {
             return res.status(404).json({ message: "No Garage was found in your city" });
         }
 
-        for (let garage of garagesInfo) {
-            const [queueData] = await connection.execute(
-                `SELECT id FROM bookslots 
-                 WHERE garage_id = ? 
-                 ORDER BY created_at DESC 
-                 LIMIT 5`, 
-                [garage.id]
-            );
+        const [queueData] = await connection.execute(
+            `SELECT garage_id, COUNT(bookslot_id) AS queue_count 
+             FROM bookslots 
+             GROUP BY garage_id`
+        );
 
-            garage.queue_count = queueData.length; // Count only up to 5
-        }
+        const queueMap = new Map(queueData.map(q => [q.garage_id, q.queue_count]));
+
+        garagesInfo.forEach(garage => {
+            garage.queue_count = queueMap.get(garage.garage_id) || 0;
+        });
 
         res.json({ Garages: garagesInfo });
 
@@ -34,7 +37,6 @@ const getGaragesInfo = asyncHandler(async (req, res) => {
         connection.release();
     }
 });
-
 
 const updategarageInfo = asyncHandler(async (req, res) => {
     let connection;
