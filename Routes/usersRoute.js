@@ -3,7 +3,7 @@ const { RegisterUser, sayhello, loginUser, checkAuth } = require('../controllers
 const authMiddleware = require('../middleware/authMiddleware')
 const router = express.Router()
 const multer = require('multer')
-const {getUsersData, getmyusers} = require('../controllers/userinfocontroller')
+const {getUsersData, updateuserInfo, getUsersHistory} = require('../controllers/userinfocontroller')
 const {authUsers} = require('../middleware/authMiddleware')
 
 
@@ -22,7 +22,8 @@ router.route("/sayhello").get(sayhello)
 router.route("/register").post(upload.single("garage_image"), RegisterUser)
 router.route("/login").post(loginUser)
 router.route("/check-auth", authMiddleware).get(checkAuth)
-router.route("/getusers").get(authUsers, getUsersData)
-router.route("/merekhiladi").get(getmyusers)
+router.route("/getuser").get(authUsers, getUsersData)
+router.route("/updateuser").put(authUsers, updateuserInfo)
+router.route("/history").get(authUsers, getUsersHistory)
 
 module.exports = router;
