@@ -2,23 +2,32 @@ const asyncHandler = require('express-async-handler')
 const mysqlConnection = require('../config/dbconnection')
 
 const getGaragesInfo = asyncHandler(async (req, res) => {
+    const { city } = req.query; 
     const connection = await mysqlConnection.getConnection();
 
     try {
-        
-        const [garagesInfo] = await connection.execute(
-            `SELECT id AS garage_id, garage_name, garage_location, garage_contact, 
-                    garage_email, garage_image, created_at 
-             FROM garages`
-        );
+        let garagesQuery = `
+            SELECT id AS garage_id, garage_name, garage_location, garage_contact, 
+                   garage_email, garage_image, created_at 
+            FROM garages
+        `;
+        const queryParams = [];
+
+        if (city) {
+            garagesQuery += " WHERE garage_location LIKE ?";
+            queryParams.push(`%${city}%`); 
+        }
+
+        const [garagesInfo] = await connection.execute(garagesQuery, queryParams);
 
         if (garagesInfo.length === 0) {
-            return res.status(404).json({ message: "No Garage was found in your city" });
+            return res.status(404).json({ message: "No garages found for the selected city" });
         }
 
         const [queueData] = await connection.execute(
             `SELECT garage_id, COUNT(bookslot_id) AS queue_count 
              FROM bookslots 
+             WHERE status = 'pending'  
              GROUP BY garage_id`
         );
 
@@ -37,6 +46,7 @@ const getGaragesInfo = asyncHandler(async (req, res) => {
         connection.release();
     }
 });
+
 
 const updategarageInfo = asyncHandler(async (req, res) => {
     let connection;
@@ -72,8 +82,54 @@ const updategarageInfo = asyncHandler(async (req, res) => {
         console.error("Update Garage Error:", err);
         res.status(500).json({ message: "Something went wrong updating data", error: err.message });
     } finally {
-        if (connection) connection.release(); // Ensure connection is released
+        if (connection) connection.release(); 
     }
 });
 
-module.exports = {getGaragesInfo, updategarageInfo}
+const getGaragesBySearch = asyncHandler(async (req, res) => {
+    const { search } = req.query; 
+    const connection = await mysqlConnection.getConnection();
+
+    try {
+        let query = `
+            SELECT id AS garage_id, garage_name, garage_location, garage_contact, 
+                   garage_email, garage_image, created_at 
+            FROM garages
+        `;
+        const queryParams = [];
+
+        if (search) {
+            query += " WHERE garage_name LIKE ? OR garage_location LIKE ?";
+            queryParams.push(`%${search}%`, `%${search}%`);
+        }
+
+        const [garagesInfo] = await connection.execute(query, queryParams);
+
+        if (garagesInfo.length === 0) {
+            return res.status(404).json({ message: "No garages found for the search term" });
+        }
+
+        const [queueData] = await connection.execute(
+            `SELECT garage_id, COUNT(bookslot_id) AS queue_count 
+             FROM bookslots 
+             WHERE status = 'pending'  
+             GROUP BY garage_id`
+        );
+
+        const queueMap = new Map(queueData.map(q => [q.garage_id, q.queue_count]));
+
+        garagesInfo.forEach(garage => {
+            garage.queue_count = queueMap.get(garage.garage_id) || 0;
+        });
+
+        res.json({ Garages: garagesInfo });
+
+    } catch (err) {
+        console.error("Database Error:", err);
+        res.status(500).json({ message: "Database Error", error: err.message });
+    } finally {
+        connection.release();
+    }
+});
+
+module.exports = {getGaragesInfo, updategarageInfo, getGaragesBySearch}

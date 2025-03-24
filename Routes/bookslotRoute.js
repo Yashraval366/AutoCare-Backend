@@ -7,5 +7,4 @@ router.route("/setbookslot").post(authUsers, setBookslotData)
 router.route("/getbookslot").get(authGarageOwner, getBookslotsData)
 router.route("/updatestatus").post(updateBookingStatus)
 
-
 module.exports = router;

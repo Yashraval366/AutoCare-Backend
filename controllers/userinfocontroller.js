@@ -30,19 +30,16 @@ const updateuserInfo = asyncHandler(async (req, res) => {
 
         const { name, city, phone, email } = req.body;
 
-        console.log("Updating user:", name, city, phone, email);
+        const userid = req.user.id
+
+        console.log("Updating user:", name, city, phone, email, userid);
 
         const sql = `
-            UPDATE users 
-            SET name = ?, 
-                city = ?, 
-                phone = ?, 
-                email = ?, 
-            WHERE id = ?
+            UPDATE users SET username = ?, city = ?, phone = ?, email = ? WHERE id = ?
         `;
 
         const [updateUser] = await connection.execute(sql, [
-            name, city, phone, email, req.user.id
+            name, city, phone, email, userid
         ]);
 
         if (updateUser.affectedRows === 0) {
