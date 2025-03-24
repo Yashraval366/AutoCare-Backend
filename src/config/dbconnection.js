@@ -9,9 +9,7 @@ let mysqlConnection = mysql2.createPool({
     waitForConnections: true,
     connectionLimit: 10, 
     queueLimit: 0,
-    ssl: {
-    rejectUnauthorized: true, 
-    }
+    ssl: false
 }).promise();
 
 
