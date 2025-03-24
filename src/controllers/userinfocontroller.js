@@ -69,7 +69,7 @@ const getUsersHistory = asyncHandler(async (req, res) => {
             return res.status(404).json({message: "No users was found for this"})
         }
 
-        res.json({PrevData : usersHist[0] })
+        res.json({PrevData : usersHist})
         
     } catch (err) {
         console.error("Database Error:", err);
