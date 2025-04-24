@@ -27,7 +27,7 @@ const getGaragesInfo = asyncHandler(async (req, res) => {
         const [queueData] = await connection.execute(
             `SELECT garage_id, COUNT(bookslot_id) AS queue_count 
              FROM bookslots 
-             WHERE status = 'pending'  
+             WHERE status = 'pending' AND date = CURDATE()  
              GROUP BY garage_id`
         );
 
